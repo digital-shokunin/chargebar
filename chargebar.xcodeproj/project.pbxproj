@@ -1,0 +1,292 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C0DE00000000000000000200 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000100 /* AppDelegate.swift */; };
+		C0DE00000000000000000201 /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000101 /* StatusItemController.swift */; };
+		C0DE00000000000000000202 /* BatteryMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000102 /* BatteryMonitor.swift */; };
+		C0DE00000000000000000203 /* BatterySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000103 /* BatterySnapshot.swift */; };
+		C0DE00000000000000000204 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000104 /* Settings.swift */; };
+		C0DE00000000000000000205 /* ChargeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000105 /* ChargeController.swift */; };
+		C0DE00000000000000000206 /* CapGuidanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000106 /* CapGuidanceView.swift */; };
+		C0DE00000000000000000207 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000107 /* LaunchAtLogin.swift */; };
+		C0DE00000000000000000208 /* SmartChargeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000108 /* SmartChargeClient.swift */; };
+		C0DE00000000000000000209 /* MacOSChargeLimitController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000109 /* MacOSChargeLimitController.swift */; };
+		C0DE0000000000000000020A /* ChargeLimitShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE0000000000000000010A /* ChargeLimitShortcuts.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C0DE00000000000000000005 /* chargebar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = chargebar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0DE00000000000000000100 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000101 /* StatusItemController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemController.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000102 /* BatteryMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryMonitor.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000103 /* BatterySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatterySnapshot.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000104 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000105 /* ChargeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargeController.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000106 /* CapGuidanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapGuidanceView.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000107 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		C0DE0000000000000000000A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C0DE0000000000000000000B /* chargebar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = chargebar.entitlements; sourceTree = "<group>"; };
+		C0DE00000000000000000108 /* SmartChargeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartChargeClient.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000109 /* MacOSChargeLimitController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacOSChargeLimitController.swift; sourceTree = "<group>"; };
+		C0DE0000000000000000010A /* ChargeLimitShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChargeLimitShortcuts.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0DE00000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C0DE00000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				C0DE00000000000000000004 /* chargebar */,
+				C0DE00000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C0DE00000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C0DE00000000000000000005 /* chargebar.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C0DE00000000000000000004 /* chargebar */ = {
+			isa = PBXGroup;
+			children = (
+				C0DE00000000000000000100 /* AppDelegate.swift */,
+				C0DE00000000000000000101 /* StatusItemController.swift */,
+				C0DE00000000000000000102 /* BatteryMonitor.swift */,
+				C0DE00000000000000000103 /* BatterySnapshot.swift */,
+				C0DE00000000000000000104 /* Settings.swift */,
+				C0DE00000000000000000105 /* ChargeController.swift */,
+				C0DE00000000000000000106 /* CapGuidanceView.swift */,
+				C0DE00000000000000000107 /* LaunchAtLogin.swift */,
+				C0DE00000000000000000108 /* SmartChargeClient.swift */,
+				C0DE00000000000000000109 /* MacOSChargeLimitController.swift */,
+				C0DE0000000000000000010A /* ChargeLimitShortcuts.swift */,
+				C0DE0000000000000000000A /* Info.plist */,
+				C0DE0000000000000000000B /* chargebar.entitlements */,
+			);
+			path = chargebar;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C0DE00000000000000000006 /* chargebar */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0DE0000000000000000000D /* Build configuration list for PBXNativeTarget "chargebar" */;
+			buildPhases = (
+				C0DE00000000000000000007 /* Sources */,
+				C0DE00000000000000000008 /* Frameworks */,
+				C0DE00000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = chargebar;
+			productName = chargebar;
+			productReference = C0DE00000000000000000005 /* chargebar.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C0DE00000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					C0DE00000000000000000006 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = C0DE0000000000000000000C /* Build configuration list for PBXProject "chargebar" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C0DE00000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 60;
+			productRefGroup = C0DE00000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C0DE00000000000000000006 /* chargebar */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C0DE00000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C0DE00000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0DE00000000000000000200 /* AppDelegate.swift in Sources */,
+				C0DE00000000000000000201 /* StatusItemController.swift in Sources */,
+				C0DE00000000000000000202 /* BatteryMonitor.swift in Sources */,
+				C0DE00000000000000000203 /* BatterySnapshot.swift in Sources */,
+				C0DE00000000000000000204 /* Settings.swift in Sources */,
+				C0DE00000000000000000205 /* ChargeController.swift in Sources */,
+				C0DE00000000000000000206 /* CapGuidanceView.swift in Sources */,
+				C0DE00000000000000000207 /* LaunchAtLogin.swift in Sources */,
+				C0DE0000000000000000020A /* ChargeLimitShortcuts.swift in Sources */,
+				C0DE00000000000000000209 /* MacOSChargeLimitController.swift in Sources */,
+				C0DE00000000000000000208 /* SmartChargeClient.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		C0DE0000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C0DE0000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		C0DE00000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = chargebar/chargebar.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = chargebar/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "net.digital-shokunin.chargebar";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		C0DE00000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = chargebar/chargebar.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = chargebar/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "net.digital-shokunin.chargebar";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C0DE0000000000000000000C /* Build configuration list for PBXProject "chargebar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0DE0000000000000000000E /* Debug */,
+				C0DE0000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0DE0000000000000000000D /* Build configuration list for PBXNativeTarget "chargebar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0DE00000000000000000010 /* Debug */,
+				C0DE00000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C0DE00000000000000000001 /* Project object */;
+}
