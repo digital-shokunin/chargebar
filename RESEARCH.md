@@ -10,7 +10,7 @@
 | Cells | 3S (three series, ~4.15 V each) |
 | Cell voltage max | ~4.20 V (100% SoC) |
 | Chemistry (inferred) | Lithium-ion polymer, cobalt-based cathode (LCO or NMC) — Apple doesn't publish, but 4.2 V max charge rules out LFP |
-| Cycle count (David's, 2026-07-14) | 55 |
+| Cycle count (author's machine, 2026-07-14) | 55 |
 | Max capacity today | 98% |
 | Condition | Normal |
 
@@ -32,12 +32,12 @@ Cycle life for cobalt-based Li-ion cells doubles roughly every 0.10 V reduction 
 
 Depth of discharge (DoD) is the other big factor — shallow cycles (e.g. 70%→80%) age the cell 3-5x less than deep cycles (0%→100%). Temperature is #2 factor after cycling stress: keep the pack under ~35 °C.
 
-## Recommendation for David
+## Recommendation (author's usage)
 
 **Sweet spot: 75%** (with option to sail down to 65% before topping up).
 
 Reasoning:
-- You're on AC most of the workday (dev at desk, calendar suggests indoor time)
+- Mostly on AC during the workday (desk-based development)
 - You've got a healthy new battery — bank the longevity now, don't wait for degradation
 - 75% vs 80% costs you ~5 Wh of usable capacity (~15-30 min of light work) but gains ~50% more cycles
 - Below 70% starts to hurt on days you actually need runtime (travel, meetings away from adapter)

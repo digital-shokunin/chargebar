@@ -63,19 +63,26 @@ Source data: see `RESEARCH.md`.
 - Menu bar app (LSUIElement in Info.plist)
 
 ## Status
-v0.2: drives macOS's own Charge Limit (80–100). Caps below 80 and sailing are not enforced yet.
+v0.3: drives macOS's own Charge Limit, and enforces caps below 80% and sailing with a small root helper.
 
 Live:
 - Status item: battery SF Symbol + charge %, updated via IOPowerSources notifications plus a 60 s refresh
-- Details: charge, state, time to full or empty, health, cycles, temperature, why macOS isn't charging, and macOS's current limit (from `pmset -g battlimit`)
-- Charge limit picker (60–100 and custom) with the cap-vs-cycle-life table inline. 80–100 sets macOS's Charge Limit through PowerUI's private `PowerUISmartChargeClient`, checked afterwards against `pmset`. Custom values round down to macOS's 5% steps.
-- Charge to Full Now (travel) and Charge Once To 85/90/95/100
+- Details: charge, state, time to full or empty, health, cycles, temperature, macOS's current limit, and which hold is stopping the charge (Charge Limit or Optimized Battery Charging)
+- Charge limit picker (60–100 and custom) with the cap-vs-cycle-life table inline:
+  - 80–100 sets macOS's own Charge Limit via PowerUI's private `PowerUISmartChargeClient` (or user-created Shortcuts), checked against `pmset -g battlimit`
+  - below 80 is enforced by the helper, with macOS holding 80% as the backstop
+- Sailing (cap → cap − N), at any cap below 100, via the helper
+- Charge to Full Now (travel), Charge Once To 85/90/95/100, Copy Diagnostics
 - Launch at login (SMAppService), settings in UserDefaults
 
-Sailing and caps below 80 (needs the helper):
-- `helper/chargebar-helper.c` is a root LaunchDaemon that cuts the charger (SMC `CHIE` = 0x08) at the cap and reconnects it at the floor. chargebar sends the policy over XPC every 60 s. If it stops hearing from chargebar for 5 minutes, at sleep, on exit, or at 20% charge, the helper reconnects the charger.
-- Install: `scripts/build.sh release && sudo scripts/install-helper.sh`. Remove: `sudo scripts/uninstall-helper.sh`.
+The helper (`helper/chargebar-helper.c`):
+- A root LaunchDaemon that switches the charger with SMC key `CHIE`: 0x08 cuts it at the cap, 0x00 reconnects it at the floor.
+- chargebar sends it the policy over XPC every 60 s.
+- It reconnects the charger at startup, on exit or signals, before sleep, at 20% charge or below, and after 5 minutes without hearing from chargebar.
 - While the charger is cut, macOS shows the Mac as unplugged (on battery).
+- Install: `scripts/build.sh release && sudo scripts/install-helper.sh`. Remove (reconnects the charger): `sudo scripts/uninstall-helper.sh`.
+- **Caveat:** builds are ad-hoc signed, so the helper only checks the caller's code-signing *identifier* (`net.digital-shokunin.chargebar`), not a team. Another local program signed with that identifier could drive it; the worst case is the charger being cut down to the 20% floor. Sign with a Developer ID and require its team to close this.
+- Apple silicon only; tested on an M4 MacBook Air (Mac16,12), macOS 26.7.1.
 
 Placeholders: heat protection, manual discharge, calibration, schedule.
 

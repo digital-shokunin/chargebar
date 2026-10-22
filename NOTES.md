@@ -74,12 +74,12 @@ Observations:
 - **A sub-80% cap and sailing** have no confirmed inhibit key. Options, in order of preference:
   1. Find how powerd applies the native Charge Limit (private preference or IOPM call). If the target is settable to arbitrary values, that is the cleanest path. It needs research into powerd and `IOPMFamily`; no SMC writes.
   2. Emulate an inhibit with `CHIE`: pulse the adapter off at the cap and back on at the floor. This works, but runs from battery while "inhibited", which costs cycles. It fits sailing, not a fixed hold.
-  3. Test other `CHIE` bit values for an inhibit-only effect. That is an experimental hardware write, and needs David's explicit go-ahead.
+  3. Test other `CHIE` bit values for an inhibit-only effect. That is an experimental hardware write, and needs the owner's explicit go-ahead.
 - Any write needs root: a privileged helper, or a one-off `sudo` test binary for experiments. Verify every write with `CHIE` read-back, ioreg `IsCharging` / `NotChargingReason` / `InstantAmperage`, and `CHNC`.
 
 ### How macOS holds its own Charge Limit (2026-10-14, read-only research)
 
-- **Owner:** `powerd`. The active policy is persisted in `/Library/Preferences/com.apple.powerd.charging.plist` as an NSKeyedArchiver blob under `policies`. On this Mac it decodes to one `ChargeCtrlPolicy`: `reason = manualChargeLimit`, `soclimit = 80`, `drain = true`, `noChargeToFull = false`, `isEndOfCharge = true`, `owner = 83736` (a PID that no longer exists), plus a token UUID. `pmset` doesn't expose it.
+- **Owner:** `powerd`. The active policy is persisted in `/Library/Preferences/com.apple.powerd.charging.plist` as an NSKeyedArchiver blob under `policies`. On this Mac it decodes to one `ChargeCtrlPolicy`: `reason = manualChargeLimit`, `soclimit = 80`, `drain = true`, `noChargeToFull = false`, `isEndOfCharge = true`, `owner = <PID of the setting process>`, plus a token UUID. `pmset` doesn't expose it.
 - **Client API:** private but exported by IOKit, in `IOKit.tbd` with no header:
   - `IOPSLimitBatteryLevel(token, uint8 soc, flags, CFStringRef reason)`. The flags are bit0 drain, bit1 noChargeToFull, bit2 isEndOfCharge. It sends XPC to `com.apple.iokit.powerdxpc` with key `chargeSocLimit` and `chargeSocLimitAction = 3`. Decoded from the disassembly.
   - Also `IOPSLimitBatteryLevelRegister`, `IOPSLimitBatteryLevelCancel`, `IOPSCopyBatteryLevelLimits` and `IOPSCopyChargeStatus`.
@@ -104,7 +104,7 @@ Recommended hybrid: keep Apple's 80% limit on as the backstop, so the pack never
 - If it can't verify state, it fails open, back to normal charging.
 - Before relying on any of this, check whether `CHIE` survives sleep and reboot.
 
-Proposed first hardware test (needs David's explicit go-ahead and one admin prompt):
+Proposed first hardware test (needs the owner's explicit go-ahead and one admin prompt):
 1. Read `CHIE`.
 2. Write `0x08`.
 3. Within 10 s, confirm in ioreg that `ExternalConnected` stays Yes and `InstantAmperage` goes negative (running on battery while plugged in).
@@ -118,7 +118,7 @@ Proposed first hardware test (needs David's explicit go-ahead and one admin prom
 - `pmset -g battlimit` (no root) lists powerd's SoC policies: one terminated and one active `manualChargeLimit` at `chargeSocLimitSoc = 80`, drain on, EOC on. chargebar can read this to display Apple's limit.
 - Firmware band keys `bfD0` (ui32), `bfE0` (ui32) and `bfF0` (ui8) exist, attr 0xd4, and are readable as a normal user. All are **0**, so Apple's 80% hold does not use them. Write access is reported to return `kIOReturnNotPrivileged` even as root on this firmware generation (charlie0129/batt #152). Not tested here.
 - `CH0B` / `CH0C` / `CHTE` are not in the key index at all (key-info fails), rather than present with zero size.
-- `PowerUISmartChargeClient` (PowerUI.framework, private) has `initWithClientName:`, `isMCLSupported`, `isMCLCurrentlyEnabled:`, `getMCLLimitWithError:`, `availableChargeLimitsWithError:`, `currentChargeLimit:`, `setMCLLimit:error:`, `enableMCL:`, `disableMCL:`, `temporarilyDisableMCL:` and `temporarilyOverrideMCLTargetSoC:error:`. This is the no-root path other tools use for Apple's 80–100 limit and for "charge to full now" (travel mode). The getter-only probe is `tools/mcl-read.m`. It wasn't run: the session's safety classifier blocked loading the private framework, so David runs it by hand.
+- `PowerUISmartChargeClient` (PowerUI.framework, private) has `initWithClientName:`, `isMCLSupported`, `isMCLCurrentlyEnabled:`, `getMCLLimitWithError:`, `availableChargeLimitsWithError:`, `currentChargeLimit:`, `setMCLLimit:error:`, `enableMCL:`, `disableMCL:`, `temporarilyDisableMCL:` and `temporarilyOverrideMCLTargetSoC:error:`. This is the no-root path other tools use for Apple's 80–100 limit and for "charge to full now" (travel mode). The getter-only probe is `tools/mcl-read.m`. Verified by running it (see below).
 - `com.apple.smartcharging.topoffprotection` is not readable as a user (root-only domain).
 
 ### macOS Charge Limit control (2026-10-14, verified on 26.7.1)
@@ -128,7 +128,7 @@ Proposed first hardware test (needs David's explicit go-ahead and one admin prom
 - **Sanctioned alternative:** Shortcuts action "Set Battery Charge Limit" (`SetBatteryChargeLimitAction` in ActionKit, macOS 26.4+). Parameters: `limit` (a `ChargeLimit` entity) and `setUntilTomorrow` (Bool, for travel). The user builds or approves the shortcut once in Shortcuts. chargebar could then call `/usr/bin/shortcuts run <name>`. This is the only user-consented, public route; there is no permission prompt an app can request for the charge limit itself. Reportedly a lifted limit comes back at 6 AM.
 - Shortcuts action details (ActionKit metadata): `limit` is a `ChargeLimit` entity from `ChargeLimitsQuery` (80/85/90/95/100) with **no resolvable input types**, so it can't be fed a number from shortcut input; one shortcut per value is needed. `setUntilTomorrow` (Bool) resets the limit the following day. Generating or signing `.shortcut` files programmatically isn't reliable (undocumented serialization; `shortcuts sign` needs iCloud), so the user creates them. chargebar (`ChargeLimitShortcuts`) uses `chargebar limit <N>` / `chargebar charge to full` when `shortcuts list` shows them, otherwise the private client. Untested so far: whether `shortcuts run` of that action runs headlessly without a prompt.
 
-### CHIE test result (2026-10-21, David ran `sudo build/chie-test`)
+### CHIE test result (2026-10-21, `sudo build/chie-test`)
 
 | | CHIE | DC-in (PDTR) | Battery (PPBR) | B0AC | Source | ExternalConnected |
 |---|---|---|---|---|---|---|
