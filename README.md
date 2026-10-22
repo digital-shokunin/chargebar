@@ -72,8 +72,11 @@ Live:
 - Charge to Full Now (travel) and Charge Once To 85/90/95/100
 - Launch at login (SMAppService), settings in UserDefaults
 
-Not yet enforced:
-- Caps below 80 and sailing are labelled "needs sailing helper"; macOS holds 80% meanwhile. The plan is a root helper using SMC key `CHIE` (see NOTES.md).
-- Heat protection, manual discharge, calibration, schedule: disabled menu placeholders
+Sailing and caps below 80 (needs the helper):
+- `helper/chargebar-helper.c` is a root LaunchDaemon that cuts the charger (SMC `CHIE` = 0x08) at the cap and reconnects it at the floor. chargebar sends the policy over XPC every 60 s. If it stops hearing from chargebar for 5 minutes, at sleep, on exit, or at 20% charge, the helper reconnects the charger.
+- Install: `scripts/build.sh release && sudo scripts/install-helper.sh`. Remove: `sudo scripts/uninstall-helper.sh`.
+- While the charger is cut, macOS shows the Mac as unplugged (on battery).
+
+Placeholders: heat protection, manual discharge, calibration, schedule.
 
 Build: see NOTES.md (`xcodebuild` with Xcode.app, or `scripts/build.sh` with Command Line Tools only).

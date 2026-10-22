@@ -5,7 +5,10 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = BatteryMonitor()
     private let settings = Settings()
-    private lazy var controller: ChargeController = MacOSChargeLimitController(initialCap: settings.cap)
+    private lazy var controller: ChargeController = MacOSChargeLimitController(
+        initialCap: settings.cap,
+        initialSailingFloor: settings.sailingEnabled ? settings.sailFloor : nil
+    )
     private var statusController: StatusItemController?
 
     static func main() {

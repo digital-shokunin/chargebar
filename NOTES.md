@@ -127,3 +127,28 @@ Proposed first hardware test (needs David's explicit go-ahead and one admin prom
 - chargebar uses it in `MacOSChargeLimitController` via `SmartChargeClient` (dlopen + ObjC runtime, no private headers). PowerUI is loaded only when the user changes a setting, never at launch.
 - **Sanctioned alternative:** Shortcuts action "Set Battery Charge Limit" (`SetBatteryChargeLimitAction` in ActionKit, macOS 26.4+). Parameters: `limit` (a `ChargeLimit` entity) and `setUntilTomorrow` (Bool, for travel). The user builds or approves the shortcut once in Shortcuts. chargebar could then call `/usr/bin/shortcuts run <name>`. This is the only user-consented, public route; there is no permission prompt an app can request for the charge limit itself. Reportedly a lifted limit comes back at 6 AM.
 - Shortcuts action details (ActionKit metadata): `limit` is a `ChargeLimit` entity from `ChargeLimitsQuery` (80/85/90/95/100) with **no resolvable input types**, so it can't be fed a number from shortcut input; one shortcut per value is needed. `setUntilTomorrow` (Bool) resets the limit the following day. Generating or signing `.shortcut` files programmatically isn't reliable (undocumented serialization; `shortcuts sign` needs iCloud), so the user creates them. chargebar (`ChargeLimitShortcuts`) uses `chargebar limit <N>` / `chargebar charge to full` when `shortcuts list` shows them, otherwise the private client. Untested so far: whether `shortcuts run` of that action runs headlessly without a prompt.
+
+### CHIE test result (2026-10-21, David ran `sudo build/chie-test`)
+
+| | CHIE | DC-in (PDTR) | Battery (PPBR) | B0AC | Source | ExternalConnected |
+|---|---|---|---|---|---|---|
+| before | 0x00 | 15.67 W | 0.94 W | 0 mA | AC Power | 1 |
+| t+2..10 s | 0x08 | 0.15–0.18 W | 8.5–14.0 W | −706…−1131 mA | Battery Power | **0** |
+| after restore | 0x00 | 20.61 W | 0.83 W | 0 mA | AC Power | 1 |
+
+- **CHIE = 0x08 disconnects the adapter**, taking effect in under 2 s and reversing cleanly. Read-back was correct both ways.
+- macOS reports the Mac as **unplugged** (`ExternalConnected = 0`, source "Battery Power"), not as "plugged in, not charging". Battery-power behaviour (energy settings, battery menu, low-power prompts) applies while it's set.
+- CHIE is a *discharge* switch, not a charge inhibit. It can't hold a steady charge below 80 while running on AC. Consequences for the helper:
+  - **Sailing** maps directly: at the cap, set 0x08 and drain to the floor; at the floor, set 0x00, and macOS charges back up, with its 80% limit as the backstop.
+  - A **fixed sub-80 cap without sailing** is the same loop with a small band (e.g. cap−3%), to avoid rapid toggling.
+  - **Manual discharge** and **calibration** also map directly.
+- Not yet known: whether 0x08 survives sleep or reboot. The helper resets it at startup and on wake regardless.
+
+### Sailing helper (2026-10-21)
+
+- Files: `helper/chargebar-helper.c` (C, root), `helper/net.digital-shokunin.chargebar.helper.plist` (LaunchDaemon: KeepAlive, Mach service `net.digital-shokunin.chargebar.helper`), `scripts/install-helper.sh` / `scripts/uninstall-helper.sh`, app side in `chargebar/HelperClient.swift`.
+- Channel: plain libxpc Mach service. The helper only accepts peers matching `identifier "net.digital-shokunin.chargebar"` (`xpc_connection_set_peer_code_signing_requirement`). With ad-hoc signing that's an identifier check, not a team check: any local process signed with that identifier could set the policy. The worst case is the charger being cut down to the 20% floor. Acceptable for personal use; a Developer ID team requirement would close it.
+- Policy: `{op: policy, enabled, cap, floor}`. Cut at charge ≥ cap, reconnect at ≤ floor, leave it alone in between. A cap below 80 without sailing uses a 3-point band. Sailing works at any cap below 100. macOS's own limit stays at max(80, cap) as the backstop.
+- Fail-safe reconnects: startup, exit/atexit, SIGTERM/SIGINT/SIGHUP, system sleep, policy off or invalid, no heartbeat for 300 s, charge ≤ 20%, CHIE or battery unreadable. Every write is read back.
+- Re-evaluates on IOPS power-source notifications, every 30 s, and on wake.
+- Logs: `log show --predicate 'subsystem == "net.digital-shokunin.chargebar.helper"' --info`.

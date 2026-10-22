@@ -10,8 +10,9 @@ import os
 /// - Caps 80–99: macOS limit on, set to the cap. Hardware-enforced, survives
 ///   chargebar quitting.
 /// - Cap 100: macOS limit off.
-/// - Caps below 80: macOS limit held at 80 as a backstop. The lower cap needs
-///   the CHIE sailing helper (TODO, see NOTES.md).
+/// - Caps below 80, and sailing: enforced by the root helper (`HelperClient`),
+///   which cuts the charger at the cap and reconnects it at the floor. macOS's
+///   limit stays at 80 as the backstop.
 @MainActor
 final class MacOSChargeLimitController: ChargeController {
     static let lowestNativeLimit = 80
@@ -26,8 +27,45 @@ final class MacOSChargeLimitController: ChargeController {
     private var lastRoute: String?
     var onVerified: ((_ ok: Bool, _ message: String) -> Void)?
 
-    init(initialCap: Int? = nil) {
+    /// Band used for a cap below 80 without sailing, so the charger isn't toggled constantly.
+    static let fixedCapBand = 3
+
+    private let helper = HelperClient()
+    private var heartbeat: Timer?
+
+    init(initialCap: Int? = nil, initialSailingFloor: Int? = nil) {
         requestedCap = initialCap
+        sailingFloor = initialSailingFloor
+        pushHelperPolicy()
+        let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.pushHelperPolicy() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        heartbeat = timer
+    }
+
+    /// Called when the helper reports a new state (e.g. charger cut / reconnected).
+    var onHelperUpdate: (() -> Void)? {
+        get { helper.onUpdate }
+        set { helper.onUpdate = newValue }
+    }
+
+    /// The band the helper should enforce: always for sailing, and for caps below 80
+    /// (macOS alone handles a plain cap of 80+). nil when the helper isn't needed.
+    private var helperBand: (cap: Int, floor: Int)? {
+        guard let cap = requestedCap, cap < 100, sailingFloor != nil || cap < Self.lowestNativeLimit else { return nil }
+        let floor = sailingFloor ?? (cap - Self.fixedCapBand)
+        return (cap, max(floor, 20))
+    }
+
+    /// Sends the current policy (also the heartbeat). Disables the helper when not needed.
+    private func pushHelperPolicy() {
+        guard HelperClient.isInstalled else { return }
+        if let band = helperBand {
+            helper.sendPolicy(enabled: true, cap: band.cap, floor: band.floor)
+        } else {
+            helper.sendPolicy(enabled: false, cap: 0, floor: 0)
+        }
     }
 
     /// macOS accepts 80–100 in 5% steps; round down so the hold is never above the cap.
@@ -57,12 +95,13 @@ final class MacOSChargeLimitController: ChargeController {
         let expected: MacOSLimit = native >= 100 ? .off : .on(native)
         log.info("setLimit(\(percent, privacy: .public)) -> macOS \(String(describing: expected), privacy: .public)")
         verify(expected, before: before)
+        pushHelperPolicy()
     }
 
     func setSailing(floor: Int?) throws {
-        // TODO: hand to the CHIE helper once it exists. macOS's limit has no sailing mode.
         sailingFloor = floor
-        log.info("setSailing(floor: \(floor.map(String.init) ?? "off", privacy: .public)) recorded; needs sailing helper")
+        log.info("setSailing(floor: \(floor.map(String.init) ?? "off", privacy: .public))")
+        pushHelperPolicy()
     }
 
     func chargeToFullNow() throws {
@@ -86,13 +125,23 @@ final class MacOSChargeLimitController: ChargeController {
     }
 
     func status() -> ChargeControllerStatus {
+        if let band = helperBand {
+            let mode = sailingFloor != nil ? "sailing \(band.cap)/\(band.floor)" : "cap \(band.cap)% (band \(band.floor)\u{2013}\(band.cap))"
+            let summary: String
+            if !HelperClient.isInstalled {
+                summary = "\(mode) needs the helper (sudo scripts/install-helper.sh); macOS holds 80%"
+            } else if let error = helper.lastError {
+                summary = "\(mode): helper \(error); macOS holds 80%"
+            } else if let status = helper.lastStatus {
+                summary = "\(mode) (" + (status.isCutting ? "charger cut by chargebar" : "charging") + ")"
+            } else {
+                summary = "\(mode) (waiting for helper)"
+            }
+            return ChargeControllerStatus(summary: summary, detail: verification)
+        }
         var summary = "macOS Charge Limit"
-        if let cap = requestedCap, cap < Self.lowestNativeLimit {
-            summary = "\(cap)% needs sailing helper; macOS holds 80%"
-        } else if let cap = requestedCap, cap < 100, Self.nativeLimit(for: cap) != cap {
+        if let cap = requestedCap, cap < 100, Self.nativeLimit(for: cap) != cap {
             summary += " (\(cap)% rounded to \(Self.nativeLimit(for: cap))%)"
-        } else if sailingFloor != nil {
-            summary += "; sailing needs helper"
         }
         if let lastRoute { summary += " via \(lastRoute)" }
         return ChargeControllerStatus(summary: summary, detail: verification)

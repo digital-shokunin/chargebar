@@ -162,8 +162,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         sub.addItem(.separator())
 
         for cap in Settings.capChoices {
-            let needsHelper = cap < MacOSChargeLimitController.lowestNativeLimit
-            let choice = item(needsHelper ? "\(cap)%  \u{2014} needs sailing helper" : "\(cap)%", #selector(selectCap(_:)))
+            let needsHelper = cap < MacOSChargeLimitController.lowestNativeLimit && !HelperClient.isInstalled
+            let choice = item(needsHelper ? "\(cap)%  \u{2014} needs helper" : "\(cap)%", #selector(selectCap(_:)))
             choice.representedObject = cap
             choice.state = settings.cap == cap ? .on : .off
             sub.addItem(choice)

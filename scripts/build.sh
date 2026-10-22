@@ -10,9 +10,11 @@ set -euo pipefail
 root=${0:A:h:h}
 config=Debug
 opt=(-Onone -g -DDEBUG)
+copt=(-O0 -g)
 if [[ ${1:-} == release ]]; then
     config=Release
     opt=(-O)
+    copt=(-O2)
 fi
 
 app="$root/build/$config/chargebar.app"
@@ -38,3 +40,11 @@ codesign --force --sign - --options runtime \
     "$app"
 
 echo "Built $app"
+
+# Root helper for caps below 80% / sailing (installed separately: sudo scripts/install-helper.sh).
+helper="$root/build/$config/chargebar-helper"
+xcrun clang -Wall -Werror -target arm64-apple-macos26.0 "${copt[@]}" \
+    -framework IOKit -framework CoreFoundation \
+    -o "$helper" "$root/helper/chargebar-helper.c"
+codesign --force --sign - --options runtime --identifier net.digital-shokunin.chargebar.helper "$helper"
+echo "Built $helper"
