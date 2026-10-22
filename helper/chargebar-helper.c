@@ -8,7 +8,8 @@
 //   - otherwise leaves the current state (that's the sailing band).
 //
 // Fail-safe: the charger is reconnected (CHIE=0x00) at startup, on exit and on
-// SIGTERM/SIGINT/SIGHUP, before system sleep, when the policy is disabled or
+// SIGTERM/SIGINT/SIGHUP, before system sleep (unless the policy allows sailing
+// through sleep and charge is well above the floor), when the policy is disabled or
 // invalid (floor < 20 or floor >= cap), and when the app hasn't sent a heartbeat for
 // 5 minutes. launchd (KeepAlive) restarts the helper after a crash, and startup
 // reconnects first. macOS's own 80% Charge Limit stays on as the backstop.
@@ -37,6 +38,7 @@
 #define EVALUATE_INTERVAL_S 30
 #define MIN_FLOOR 20
 #define MAX_CAP 100
+#define SLEEP_SAIL_MARGIN 5  // keep the cut through sleep only above floor + this
 
 static os_log_t logger;
 
@@ -139,8 +141,11 @@ static struct {
     int enabled;
     int cap;
     int floor;
+    int sailDuringSleep;
     time_t lastHeartbeat;
 } policy;
+
+static time_t sleptAt;  // 0 when awake
 
 static const char *lastAction = "starting";
 static int sleeping;
@@ -190,6 +195,7 @@ static xpc_object_t statusReply(xpc_object_t request, const char *error) {
     xpc_dictionary_set_bool(reply, "enabled", policy.enabled);
     xpc_dictionary_set_int64(reply, "cap", policy.cap);
     xpc_dictionary_set_int64(reply, "floor", policy.floor);
+    xpc_dictionary_set_bool(reply, "sailDuringSleep", policy.sailDuringSleep);
     return reply;
 }
 
@@ -200,6 +206,7 @@ static void handleMessage(xpc_connection_t peer, xpc_object_t message) {
         int enabled = xpc_dictionary_get_bool(message, "enabled");
         int cap = (int)xpc_dictionary_get_int64(message, "cap");
         int floor = (int)xpc_dictionary_get_int64(message, "floor");
+        int sailDuringSleep = xpc_dictionary_get_bool(message, "sailDuringSleep");
         if (enabled && (cap > MAX_CAP || floor < MIN_FLOOR || floor >= cap)) {
             error = "invalid policy (need 20 <= floor < cap <= 100)";
             policy.enabled = 0;
@@ -210,6 +217,7 @@ static void handleMessage(xpc_connection_t peer, xpc_object_t message) {
             policy.enabled = enabled;
             policy.cap = cap;
             policy.floor = floor;
+            policy.sailDuringSleep = sailDuringSleep;
         }
         policy.lastHeartbeat = time(NULL);
         evaluate();
@@ -233,12 +241,25 @@ static void powerCallback(void *refcon, io_service_t service, natural_t type, vo
     case kIOMessageCanSystemSleep:
         IOAllowPowerChange(rootPort, (long)arg);
         break;
-    case kIOMessageSystemWillSleep:
+    case kIOMessageSystemWillSleep: {
+        int percent = chargePercent();
+        int keepCut = policy.enabled && policy.sailDuringSleep && percent >= 0 &&
+                      percent > policy.floor + SLEEP_SAIL_MARGIN && percent > MIN_FLOOR + SLEEP_SAIL_MARGIN;
+        if (keepCut) {
+            os_log(logger, "sleeping at %d%%: leaving charger state as is (sail during sleep)", percent);
+        } else {
+            reconnect("system sleep");
+        }
         sleeping = 1;
-        reconnect("system sleep");
+        sleptAt = time(NULL);
         IOAllowPowerChange(rootPort, (long)arg);
         break;
+    }
     case kIOMessageSystemHasPoweredOn:
+        // Fires on full and dark wakes. The app can't send heartbeats while asleep,
+        // so don't count time asleep against the heartbeat timeout.
+        if (sleptAt) policy.lastHeartbeat += time(NULL) - sleptAt;
+        sleptAt = 0;
         sleeping = 0;
         evaluate();
         break;

@@ -128,6 +128,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         menu.addItem(disabled("Charge: \(s.percent)%  \u{00B7}  Limit: \(settings.cap)%"))
         var state = "State: \(s.stateDescription)"
+        if controller.status().chargerCut && !s.onAC {
+            state = "State: Plugged in, running on battery (charger paused by chargebar)"
+        }
         if let time = s.timeDescription { state += " (\(time))" }
         menu.addItem(disabled(state))
         if let reason = s.notChargingDescription, let code = s.notChargingReason {
@@ -201,6 +204,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let toggle = item("Enable Sailing", #selector(toggleSailing))
         toggle.state = settings.sailingEnabled ? .on : .off
         sub.addItem(toggle)
+        let sleepToggle = item("Keep Sailing During Sleep", #selector(toggleSailDuringSleep))
+        sleepToggle.state = settings.sailDuringSleep ? .on : .off
+        sleepToggle.toolTip = "Off: the charger is reconnected before sleep and macOS's limit holds. On: it stays off through sleep while charge is more than 5 points above the floor; the helper re-checks on each background wake."
+        sub.addItem(sleepToggle)
         sub.addItem(.separator())
         sub.addItem(disabled("Let charge drift down before topping up:"))
         for drift in Settings.sailDriftChoices {
@@ -284,6 +291,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     @objc private func toggleSailing() {
         settings.sailingEnabled.toggle()
         applySailing()
+    }
+
+    @objc private func toggleSailDuringSleep() {
+        settings.sailDuringSleep.toggle()
+        controller.setSailDuringSleep(settings.sailDuringSleep)
     }
 
     @objc private func selectDrift(_ sender: NSMenuItem) {

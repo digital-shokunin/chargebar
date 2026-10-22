@@ -33,9 +33,12 @@ final class MacOSChargeLimitController: ChargeController {
     private let helper = HelperClient()
     private var heartbeat: Timer?
 
-    init(initialCap: Int? = nil, initialSailingFloor: Int? = nil) {
+    private var sailDuringSleep: Bool
+
+    init(initialCap: Int? = nil, initialSailingFloor: Int? = nil, sailDuringSleep: Bool = false) {
         requestedCap = initialCap
         sailingFloor = initialSailingFloor
+        self.sailDuringSleep = sailDuringSleep
         pushHelperPolicy()
         let timer = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.pushHelperPolicy() }
@@ -62,9 +65,9 @@ final class MacOSChargeLimitController: ChargeController {
     private func pushHelperPolicy() {
         guard HelperClient.isInstalled else { return }
         if let band = helperBand {
-            helper.sendPolicy(enabled: true, cap: band.cap, floor: band.floor)
+            helper.sendPolicy(enabled: true, cap: band.cap, floor: band.floor, sailDuringSleep: sailDuringSleep)
         } else {
-            helper.sendPolicy(enabled: false, cap: 0, floor: 0)
+            helper.sendPolicy(enabled: false, cap: 0, floor: 0, sailDuringSleep: false)
         }
     }
 
@@ -95,6 +98,11 @@ final class MacOSChargeLimitController: ChargeController {
         let expected: MacOSLimit = native >= 100 ? .off : .on(native)
         log.info("setLimit(\(percent, privacy: .public)) -> macOS \(String(describing: expected), privacy: .public)")
         verify(expected, before: before)
+        pushHelperPolicy()
+    }
+
+    func setSailDuringSleep(_ enabled: Bool) {
+        sailDuringSleep = enabled
         pushHelperPolicy()
     }
 
@@ -133,11 +141,13 @@ final class MacOSChargeLimitController: ChargeController {
             } else if let error = helper.lastError {
                 summary = "\(mode): helper \(error); macOS holds 80%"
             } else if let status = helper.lastStatus {
-                summary = "\(mode) (" + (status.isCutting ? "charger cut by chargebar" : "charging") + ")"
+                summary = "\(mode) (" + (status.isCutting ? "charger cut by chargebar" : "charging")
+                    + (sailDuringSleep ? "; continues during sleep" : "; reconnects for sleep") + ")"
             } else {
                 summary = "\(mode) (waiting for helper)"
             }
-            return ChargeControllerStatus(summary: summary, detail: verification)
+            let cut = HelperClient.isInstalled && helper.lastError == nil && helper.lastStatus?.isCutting == true
+            return ChargeControllerStatus(summary: summary, detail: verification, chargerCut: cut)
         }
         var summary = "macOS Charge Limit"
         if let cap = requestedCap, cap < 100, Self.nativeLimit(for: cap) != cap {

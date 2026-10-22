@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = Settings()
     private lazy var controller: ChargeController = MacOSChargeLimitController(
         initialCap: settings.cap,
-        initialSailingFloor: settings.sailingEnabled ? settings.sailFloor : nil
+        initialSailingFloor: settings.sailingEnabled ? settings.sailFloor : nil,
+        sailDuringSleep: settings.sailDuringSleep
     )
     private var statusController: StatusItemController?
 

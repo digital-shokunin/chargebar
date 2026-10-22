@@ -12,6 +12,7 @@ final class Settings {
         static let cap = "chargeLimit"
         static let sailingEnabled = "sailingEnabled"
         static let sailDrift = "sailDrift"
+        static let sailDuringSleep = "sailDuringSleep"
     }
 
     private let defaults: UserDefaults
@@ -41,6 +42,12 @@ final class Settings {
     var sailDrift: Int {
         get { defaults.integer(forKey: Key.sailDrift) }
         set { defaults.set(newValue.clamped(to: 1...50), forKey: Key.sailDrift) }
+    }
+
+    /// Keep the charger off through system sleep while sailing (off: reconnect for sleep).
+    var sailDuringSleep: Bool {
+        get { defaults.bool(forKey: Key.sailDuringSleep) }
+        set { defaults.set(newValue, forKey: Key.sailDuringSleep) }
     }
 
     /// Lower bound of the sailing window.

@@ -5,6 +5,8 @@ struct ChargeControllerStatus: Sendable {
     var summary: String
     /// Extra detail for the menu (e.g. last verification result), if any.
     var detail: String?
+    /// True while chargebar has the charger switched off (Mac runs on battery while plugged in).
+    var chargerCut = false
 }
 
 /// The enforcement layer: whatever actually stops the charger at the cap.
@@ -18,6 +20,8 @@ protocol ChargeController: AnyObject {
     func setLimit(_ percent: Int) throws
     /// Enable sailing between `floor` and the current limit, or pass nil to disable.
     func setSailing(floor: Int?) throws
+    /// Whether sailing may keep the charger off through system sleep.
+    func setSailDuringSleep(_ enabled: Bool)
     /// Travel mode: lift every limit for the current charge.
     func chargeToFullNow() throws
     /// Charge once to `percent`, then return to the normal limit.
@@ -37,6 +41,10 @@ final class LoggingChargeController: ChargeController {
 
     func setLimit(_ percent: Int) throws {
         log.info("setLimit(\(percent, privacy: .public)) requested; not enforced")
+    }
+
+    func setSailDuringSleep(_ enabled: Bool) {
+        log.info("setSailDuringSleep(\(enabled)) requested; not enforced")
     }
 
     func setSailing(floor: Int?) throws {

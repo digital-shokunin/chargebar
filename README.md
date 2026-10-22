@@ -79,7 +79,8 @@ The helper (`helper/chargebar-helper.c`):
 - A root LaunchDaemon that switches the charger with SMC key `CHIE`: 0x08 cuts it at the cap, 0x00 reconnects it at the floor.
 - chargebar sends it the policy over XPC every 60 s.
 - It reconnects the charger at startup, on exit or signals, before sleep, at 20% charge or below, and after 5 minutes without hearing from chargebar.
-- While the charger is cut, macOS shows the Mac as unplugged (on battery).
+- While the charger is cut, macOS shows the Mac as unplugged (on battery). chargebar's menu says "Plugged in, running on battery (charger paused by chargebar)".
+- Sleep: by default the charger is reconnected before sleep, so macOS's 80% limit holds overnight. **Keep Sailing During Sleep** (Sailing Mode menu, off by default) leaves it cut through sleep while charge is more than 5 points above the floor. The helper re-checks on every background (dark) wake, about every 15 minutes here, and reconnects at the floor. Time asleep doesn't count against the 5-minute heartbeat timeout.
 - Install: `scripts/build.sh release && sudo scripts/install-helper.sh`. Remove (reconnects the charger): `sudo scripts/uninstall-helper.sh`.
 - **Caveat:** builds are ad-hoc signed, so the helper only checks the caller's code-signing *identifier* (`net.digital-shokunin.chargebar`), not a team. Another local program signed with that identifier could drive it; the worst case is the charger being cut down to the 20% floor. Sign with a Developer ID and require its team to close this.
 - Apple silicon only; tested on an M4 MacBook Air (Mac16,12), macOS 26.7.1.

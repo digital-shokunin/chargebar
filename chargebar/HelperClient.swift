@@ -35,12 +35,13 @@ final class HelperClient {
     private let log = Logger(subsystem: "net.digital-shokunin.chargebar", category: "Helper")
     private var connection: xpc_connection_t?
 
-    func sendPolicy(enabled: Bool, cap: Int, floor: Int) {
+    func sendPolicy(enabled: Bool, cap: Int, floor: Int, sailDuringSleep: Bool) {
         let message = xpc_dictionary_create(nil, nil, 0)
         xpc_dictionary_set_string(message, "op", "policy")
         xpc_dictionary_set_bool(message, "enabled", enabled)
         xpc_dictionary_set_int64(message, "cap", Int64(cap))
         xpc_dictionary_set_int64(message, "floor", Int64(floor))
+        xpc_dictionary_set_bool(message, "sailDuringSleep", sailDuringSleep)
         send(message)
     }
 
