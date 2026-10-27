@@ -151,10 +151,16 @@ Proposed first hardware test (needs the owner's explicit go-ahead and one admin 
 - Policy: `{op: policy, enabled, cap, floor}`. Cut at charge ≥ cap, reconnect at ≤ floor, leave it alone in between. A cap below 80 without sailing uses a 3-point band. Sailing works at any cap below 100. macOS's own limit stays at max(80, cap) as the backstop.
 - Fail-safe reconnects: startup, exit/atexit, SIGTERM/SIGINT/SIGHUP, system sleep, policy off or invalid, no heartbeat for 300 s, charge ≤ 20%, CHIE or battery unreadable. Every write is read back.
 - Re-evaluates on IOPS power-source notifications, every 30 s, and on wake.
-- Logs: `log show --predicate 'subsystem == "net.digital-shokunin.chargebar.helper"' --info`.
+- Logs: `/usr/bin/log show --predicate 'subsystem == "net.digital-shokunin.chargebar.helper"' --info`.
 
 ### Sleep behaviour (2026-10-22)
 
 - First overnight run: the Mac was in "Maintenance Sleep" most of the night (`pmset -g log`: 17 sleep entries, dark wakes every ~15 min). The helper reconnected before each sleep, so macOS's 80% limit held it at 80%. Sailing resumed on full wake (−450 mA, PDTR 0.2 W).
 - Added an opt-in `sailDuringSleep` policy flag. On `kIOMessageSystemWillSleep` the helper keeps the current charger state only if `enabled && sailDuringSleep && charge > floor + 5 && charge > 25`; otherwise it reconnects. `kIOMessageSystemHasPoweredOn` (full and dark wakes) re-evaluates and credits the time asleep to the heartbeat, so the first dark wake doesn't trip the 5-minute timeout.
 - Residual risk with the flag on: if dark wakes stop, the battery drains in sleep with the charger off. That's about 1%/h at sleep load, with macOS's own low-battery hibernation as the final backstop.
+
+### Charge to Full Now vs sailing (2026-10-27)
+
+- Seen: after a Charge to Full Now click (built-in client, `temporarilyDisableMCL`), powerd dropped all charge-limit policies (`pmset -g battlimit`: "No battery level limits set"). MCL still reported enabled at 80. Sailing kept cutting at 75%, so the battery never reached 100% and the lift never ended. Apple's 80% backstop stayed off for days.
+- Fix: Charge to Full Now now pauses the helper policy until the battery is full (or Cancel Charge to Full), then restores sailing and re-applies macOS's limit (`setMCLLimit`), which ends the lift. The menu flags "macOS limit: lifted (no limit active)" with a "Restore macOS Limit" item whenever powerd has no limit but chargebar's cap is below 100.
+- The Enforcement line shows the sailing phase: "charging up to 75%" or "charger cut by chargebar, drifting down to 65%".

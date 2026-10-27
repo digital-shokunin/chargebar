@@ -34,6 +34,8 @@ final class MacOSChargeLimitController: ChargeController {
     private var heartbeat: Timer?
 
     private var sailDuringSleep: Bool
+    /// Charge to Full Now in progress: sailing paused until the battery is full.
+    private(set) var isChargingToFull = false
 
     init(initialCap: Int? = nil, initialSailingFloor: Int? = nil, sailDuringSleep: Bool = false) {
         requestedCap = initialCap
@@ -56,7 +58,7 @@ final class MacOSChargeLimitController: ChargeController {
     /// The band the helper should enforce: always for sailing, and for caps below 80
     /// (macOS alone handles a plain cap of 80+). nil when the helper isn't needed.
     private var helperBand: (cap: Int, floor: Int)? {
-        guard let cap = requestedCap, cap < 100, sailingFloor != nil || cap < Self.lowestNativeLimit else { return nil }
+        guard !isChargingToFull, let cap = requestedCap, cap < 100, sailingFloor != nil || cap < Self.lowestNativeLimit else { return nil }
         let floor = sailingFloor ?? (cap - Self.fixedCapBand)
         return (cap, max(floor, 20))
     }
@@ -117,13 +119,39 @@ final class MacOSChargeLimitController: ChargeController {
             // Shortcut sets 100% "until tomorrow"; macOS restores the previous limit the next day.
             try ChargeLimitShortcuts.run(ChargeLimitShortcuts.chargeToFull)
             lastRoute = "Shortcuts"
-            verification = "Charging to full; macOS restores the limit tomorrow"
         } else {
             try loadClient().temporarilyDisable()
             lastRoute = "built-in client"
-            verification = "Charging to full for this charge"
         }
+        // Sailing would cut the charger at the cap and defeat the full charge: pause it.
+        isChargingToFull = true
+        pushHelperPolicy()
+        verification = "Charge to Full Now: charging to 100%, sailing paused"
         log.info("chargeToFullNow via \(self.lastRoute ?? "?", privacy: .public)")
+    }
+
+    func cancelChargeToFull() throws {
+        try endChargeToFull(reason: "cancelled")
+    }
+
+    func restoreMacOSLimit() throws {
+        try setLimit(requestedCap ?? Self.lowestNativeLimit)
+    }
+
+    func batteryUpdated(_ snapshot: BatterySnapshot) {
+        guard isChargingToFull, snapshot.isFullyCharged || snapshot.percent >= 100 else { return }
+        do { try endChargeToFull(reason: "battery full") } catch {
+            log.error("ending Charge to Full Now failed: \(error.localizedDescription, privacy: .public)")
+            verification = "Full; restoring macOS limit failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Restores sailing and re-applies macOS's limit, which ends the temporary lift.
+    private func endChargeToFull(reason: String) throws {
+        isChargingToFull = false
+        pushHelperPolicy()
+        try setLimit(requestedCap ?? Self.lowestNativeLimit)
+        log.info("Charge to Full Now ended (\(reason, privacy: .public)); limits restored")
     }
 
     func chargeOnce(to percent: Int) throws {
@@ -141,13 +169,18 @@ final class MacOSChargeLimitController: ChargeController {
             } else if let error = helper.lastError {
                 summary = "\(mode): helper \(error); macOS holds 80%"
             } else if let status = helper.lastStatus {
-                summary = "\(mode) (" + (status.isCutting ? "charger cut by chargebar" : "charging")
-                    + (sailDuringSleep ? "; continues during sleep" : "; reconnects for sleep") + ")"
+                let phase = status.isCutting
+                    ? "charger cut by chargebar, drifting down to \(band.floor)%"
+                    : "charging up to \(band.cap)%"
+                summary = "\(mode) (\(phase); " + (sailDuringSleep ? "continues during sleep" : "reconnects for sleep") + ")"
             } else {
                 summary = "\(mode) (waiting for helper)"
             }
             let cut = HelperClient.isInstalled && helper.lastError == nil && helper.lastStatus?.isCutting == true
             return ChargeControllerStatus(summary: summary, detail: verification, chargerCut: cut)
+        }
+        if isChargingToFull {
+            return ChargeControllerStatus(summary: "Charge to Full Now (sailing paused until 100%)", detail: verification)
         }
         var summary = "macOS Charge Limit"
         if let cap = requestedCap, cap < 100, Self.nativeLimit(for: cap) != cap {
@@ -239,6 +272,7 @@ enum MacOSLimit: Sendable, Equatable {
 
     nonisolated static func parse(_ text: String) -> MacOSLimit {
         // Output: "Battery level limits:\n( { key = value; ... }, ... )" (OpenStep plist).
+        if text.contains("No battery level limits set") { return .off }
         guard let entries = entries(text) else { return .unknown }
 
         let active = entries.last {

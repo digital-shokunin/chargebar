@@ -24,7 +24,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         statusItem.button?.imagePosition = .imageLeading
         statusItem.button?.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
 
-        monitor.onChange = { [weak self] snapshot in self?.updateButton(snapshot) }
+        monitor.onChange = { [weak self] snapshot in
+            guard let self else { return }
+            if let snapshot { self.controller.batteryUpdated(snapshot) }
+            self.updateButton(snapshot)
+        }
         controller.onVerified = { [weak self] ok, actual in self?.flashResult(ok: ok, actual: actual) }
         // Settings are pushed only on explicit user changes, never at launch.
         updateButton(monitor.snapshot)
@@ -93,7 +97,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(sailingMenuItem())
         menu.addItem(.separator())
 
-        menu.addItem(item("Charge to Full Now", #selector(chargeToFullNow)))
+        if controller.isChargingToFull {
+            menu.addItem(item("Cancel Charge to Full", #selector(cancelChargeToFull)))
+        } else {
+            menu.addItem(item("Charge to Full Now", #selector(chargeToFullNow)))
+        }
         menu.addItem(chargeOnceMenuItem())
         let installed = ChargeLimitShortcuts.installed().count
         menu.addItem(item("Use Shortcuts (\(installed) of \(ChargeLimitShortcuts.allNames.count) set up)\u{2026}", #selector(showShortcutsSetup)))
@@ -140,7 +148,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         switch s.macOSLimit {
         case .on(let soc): menu.addItem(disabled("macOS limit: \(soc)%"))
-        case .off: menu.addItem(disabled("macOS limit: Off"))
+        case .off:
+            if settings.cap < 100 && !controller.isChargingToFull {
+                // powerd has no active limit although chargebar's cap is below 100:
+                // e.g. a Charge to Full lift that never ended. Apple's backstop is off.
+                menu.addItem(disabled("macOS limit: lifted (no limit active)"))
+                menu.addItem(item("Restore macOS Limit", #selector(restoreMacOSLimit)))
+            } else {
+                menu.addItem(disabled("macOS limit: Off"))
+            }
         case .unknown: break
         }
         if let health = s.healthPercent {
@@ -329,8 +345,37 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         lines.append("")
         lines.append("$ pmset -g battlimit")
         lines.append(MacOSLimit.rawOutput() ?? "(pmset failed)")
+        lines.append("")
+        lines.append("$ /usr/bin/log show --last 24h (helper events, last 20)")
+        lines.append(Self.recentHelperEvents() ?? "(no helper events)")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+    }
+
+    /// The helper's recent cut/reconnect events from the unified log (no root needed).
+    /// Note: zsh has a `log` builtin, so the full path matters when run by hand too.
+    private static func recentHelperEvents() -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
+        process.arguments = ["show", "--last", "24h", "--info", "--style", "compact",
+                             "--predicate", "subsystem == \"\(HelperClient.serviceName)\""]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() } catch { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+        let lines = String(decoding: data, as: UTF8.self)
+            .split(separator: "\n")
+            .filter { !$0.hasPrefix("Timestamp") }
+            .map { line -> String in
+                // "2026-10-27 08:01:02.123 Df net...helper[pid:tid] [subsystem:helper] message" -> "time  message"
+                let parts = line.split(separator: " ", maxSplits: 1)
+                let time = parts.first.map(String.init) ?? ""
+                let message = line.range(of: ":helper] ").map { String(line[$0.upperBound...]) } ?? String(line)
+                return "\(time)  \(message)"
+            }
+        return lines.isEmpty ? nil : lines.suffix(20).joined(separator: "\n")
     }
 
     @objc private func showShortcutsSetup() {
@@ -348,6 +393,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     @objc private func chargeToFullNow() {
         perform("Charge to Full Now") { try controller.chargeToFullNow() }
+    }
+
+    @objc private func cancelChargeToFull() {
+        perform("Cancel Charge to Full") { try controller.cancelChargeToFull() }
+    }
+
+    @objc private func restoreMacOSLimit() {
+        perform("Restore macOS limit") { try controller.restoreMacOSLimit() }
     }
 
     @objc private func chargeOnce(_ sender: NSMenuItem) {

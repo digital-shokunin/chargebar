@@ -26,6 +26,13 @@ protocol ChargeController: AnyObject {
     func chargeToFullNow() throws
     /// Charge once to `percent`, then return to the normal limit.
     func chargeOnce(to percent: Int) throws
+    /// Ends Charge to Full Now early: restores sailing and macOS's limit.
+    func cancelChargeToFull() throws
+    /// Re-applies macOS's own limit for the current cap (ends any temporary lift).
+    func restoreMacOSLimit() throws
+    /// Fed every battery refresh, so time- and charge-based transitions can happen.
+    func batteryUpdated(_ snapshot: BatterySnapshot)
+    var isChargingToFull: Bool { get }
     func status() -> ChargeControllerStatus
     /// Called after a limit change has been checked against powerd.
     var onVerified: ((_ ok: Bool, _ message: String) -> Void)? { get set }
@@ -54,6 +61,11 @@ final class LoggingChargeController: ChargeController {
     func chargeToFullNow() throws {
         log.info("chargeToFullNow requested; not enforced")
     }
+
+    func cancelChargeToFull() throws {}
+    func restoreMacOSLimit() throws {}
+    func batteryUpdated(_ snapshot: BatterySnapshot) {}
+    var isChargingToFull: Bool { false }
 
     func chargeOnce(to percent: Int) throws {
         log.info("chargeOnce(to: \(percent, privacy: .public)) requested; not enforced")
