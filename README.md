@@ -104,3 +104,7 @@ Cycles are cumulative: 10 partial charges of 10% make 1 cycle. Sitting *at* the 
 - [AlDente](https://apphousekitchen.com) (feature reference, not code)
 - [ProxyBar](https://github.com/baha2046/ProxyBar) (NSStatusItem/AppKit menu patterns)
 - Community SMC research on Apple silicon charge keys (e.g. actuallymentor/battery, charlie0129/batt)
+
+## License
+
+MIT. See [LICENSE](LICENSE).
