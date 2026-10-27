@@ -149,11 +149,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         switch s.macOSLimit {
         case .on(let soc): menu.addItem(disabled("macOS limit: \(soc)%"))
         case .off:
-            if settings.cap < 100 && !controller.isChargingToFull {
-                // powerd has no active limit although chargebar's cap is below 100:
+            if settings.cap < 100 && !controller.isChargingToFull && s.onAC {
+                // On AC, powerd has no active limit although chargebar's cap is below 100:
                 // e.g. a Charge to Full lift that never ended. Apple's backstop is off.
+                // (While on battery, including a sailing cut, powerd lists no limits at all,
+                // so this is only meaningful on AC.)
                 menu.addItem(disabled("macOS limit: lifted (no limit active)"))
                 menu.addItem(item("Restore macOS Limit", #selector(restoreMacOSLimit)))
+            } else if !s.onAC {
+                menu.addItem(disabled("macOS limit: inactive on battery"))
             } else {
                 menu.addItem(disabled("macOS limit: Off"))
             }
